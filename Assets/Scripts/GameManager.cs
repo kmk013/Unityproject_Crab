@@ -2,15 +2,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour {
+public class GameManager : SingleTon<GameManager> {
 
-	// Use this for initialization
+    private GameSetting gameSetting;
+
+    public bool isLeftHanded;
+    
 	void Start () {
-		
+        gameSetting = GetComponent<GameSetting>();
+
+        isLeftHanded = true;
+        
 	}
 	
-	// Update is called once per frame
 	void Update () {
-		
-	}
+        gameSetting.HandedSetting(isLeftHanded);
+    }
 }
