@@ -2,56 +2,104 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class Player : MonoBehaviour {
+public class Player : MonoBehaviour
+{
+    public ControlButton controlButton;
 
-    [Range(0.0f, 2.5f)]
+    [Range(0.0f, 100f)]
     public float moveSpeed;
 
-    private Joystick joystick;
     private Animator playerAnimator;
 
-	private void Start () {
-        joystick = GameObject.Find("Joystick").GetComponent<Joystick>();
-        playerAnimator = GetComponent<Animator>();
-	}
+    private bool isPlayerMove = false;
+    private bool isPlayerTurn = false;
+    private bool isPlayerWatchedRight = true;
 
-    private void Update () {
-        PlayerControl();
-        PlayerRotationAnimation();
+    private void Start()
+    {
+        playerAnimator = GetComponent<Animator>();
+    }
+    private void Update()
+    {
+        PlayerMove();
     }
 
-    //조이스틱을 이용한 플레이어 컨트롤 함수
-    private void PlayerControl()
+    private void PlayerMove()
     {
-        if (joystick.GetJoystickState() != JoystickState.NONE)
+        if (controlButton.joystickState == JoystickState.LEFT || controlButton.joystickState == JoystickState.RIGHT)
         {
-            PlayerMoveClamp();
-            transform.Translate(new Vector3(joystick.GetHorizontalValue(), 0, 0).normalized * moveSpeed * Time.deltaTime);
-            if (joystick.GetHorizontalValue() > 0)
+            if (!isPlayerMove)
             {
-                transform.localScale = new Vector3(1, 1, 1);
-                Camera.main.transform.Translate(Vector3.right * moveSpeed * Time.deltaTime);
+                PlayerTurn();
+                if (!isPlayerTurn)
+                {
+                    isPlayerMove = true;
+                    playerAnimator.SetBool("isWalk", true);
+                }
             }
-            else if (joystick.GetHorizontalValue() < 0)
-                transform.localScale = new Vector3(-1, 1, 1);
+            else
+            {
+                PlayerMoveClamp();
+                transform.position += transform.right * moveSpeed * Time.deltaTime;
+                PlayerTurn();
+            }
+        }
+        else
+            if (isPlayerMove)
+        {
+            isPlayerMove = false;
+            playerAnimator.SetBool("isWalk", false);
         }
     }
 
-    //플레이어 이동 범위 제한
+    private void PlayerTurn()
+    {
+        if (controlButton.joystickState == JoystickState.LEFT)
+        {
+            if (isPlayerWatchedRight)
+            {
+                isPlayerTurn = true;
+                playerAnimator.SetTrigger("isTurn");
+            }
+            isPlayerWatchedRight = false;
+        }
+        else if (controlButton.joystickState == JoystickState.RIGHT)
+        {
+            if (!isPlayerWatchedRight)
+            {
+                isPlayerTurn = true;
+                playerAnimator.SetTrigger("isTurn");
+            }
+            isPlayerWatchedRight = true;
+        }
+
+        if (isPlayerTurn)
+        {
+            if (playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("PlayerTurn2"))
+            {
+                transform.rotation *= Quaternion.Euler(0, -180, 0);
+                isPlayerTurn = false;
+            }
+        } else
+        {
+            isPlayerMove = true;
+            playerAnimator.SetBool("isWalk", true);
+        }
+    }
+
+    //플레이어 이동 제한
     private void PlayerMoveClamp()
     {
         Vector3 pos = Camera.main.WorldToViewportPoint(transform.position);
-        if (pos.x < 0f) pos.x = 0f;
-        if (pos.x > 1f) pos.x = 1f;
-        if (pos.y < 0f) pos.y = 0f;
-        if (pos.y > 1f) pos.y = 1f;
-        transform.position = Camera.main.ViewportToWorldPoint(pos);
-    }
-
-    //플레이어 애니메이션 전환 함수
-    private void PlayerRotationAnimation()
-    {
-        playerAnimator.SetInteger("JoystickState", (int)joystick.GetJoystickState());
+        if (pos.x < 0.05f)
+        {
+            pos.x = 0.05f;
+            transform.position = Camera.main.ViewportToWorldPoint(pos);
+        }
+        if(pos.x > 0.95f)
+        {
+            pos.x = 0.95f;
+            transform.position = Camera.main.ViewportToWorldPoint(pos);
+        }
     }
 }
